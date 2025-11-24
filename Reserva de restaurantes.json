@@ -1,0 +1,388 @@
+{
+  "name": "Reserva de restaurantes",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "id": "39b3c0e5-6c65-435d-b4a2-3a134102e556",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -2064,
+        1344
+      ],
+      "webhookId": "b93db7e3-7779-4f07-9e37-696220518685"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Eres un asistente de reservas de restaurantes.\n\nLISTA DE RESTAURANTES DISPONIBLES:\n{{ \n  $('GET API RESTAURANTES').all().map(\n    r => `- ${r.json.restaurante} (${r.json.ciudad}) - Horario: ${r.json.horario} - Ubicación: ${r.json.ubicacion}`\n  ).join('\\n') \n}}\n\nREGLAS IMPORTANTES:\n\n1. Solo muestra la lista de restaurantes una vez, cuando el usuario la pida o cuando sea necesario.\n\n2. Una vez el usuario elija restaurante, NO vuelvas a mostrar la lista.\n\n3. Cuando el usuario proporcione restaurante, fecha, hora, personas y nombre:\nResponde ÚNICAMENTE con JSON válido y NADA DE TEXTO POR FUERA.\n\n4. El JSON DEBE seguir este formato EXACTO:\n\n{\n  \"valid\": true,\n  \"restaurantName\": \"Nombre\",\n  \"date\": \"YYYY-MM-DD\",\n  \"time\": \"HH:mm\",\n  \"numberOfPeople\": 2,\n  \"customerName\": \"Nombre\",\n  \"message\": \"Mensaje de confirmación\"\n}\n\n\n5. Convierte:\n\nFechas al formato DD/MM/YYYY\n\nHoras al formato 12h HH:mm\n\n6. Si falta información, responde SOLO en texto conversacional SIN JSON."
+        }
+      },
+      "id": "91ec1e4f-2dc8-486e-81bb-13492f8a358f",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1840,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "llama-3.3-70b-versatile",
+          "mode": "list",
+          "cachedResultName": "llama-3.3-70b-versatile"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "2f5ae867-f54e-43fe-8a5f-a47600e6cb87",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1776,
+        1712
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "cdHUugGweqTc7ZJf",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('API').first().json.restaurantApiUrl }}",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "id": "b15d6874-b5af-41c4-89aa-fbe7f6eb9d4d",
+      "name": "GET API RESTAURANTES",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1488,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "restaurantApiUrl",
+              "value": "https://6923652c3ad095fb84706f42.mockapi.io/restaurantes",
+              "type": "string"
+            },
+            {
+              "id": "f1ef0367-3416-4dc3-9667-0f546433df26",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "bca4d522-a858-40a1-adca-e9635092658d",
+      "name": "API",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1776,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "parsedResponse",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "isValidReservation",
+              "value": "={{ Boolean((() => {\n  try {\n    const data = JSON.parse($json.output);\n    return data.valid === true;\n  } catch (e) {\n    return false;\n  }\n})()) }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": "={{ true }}",
+        "options": {}
+      },
+      "id": "87b3f984-02c6-469b-89be-641b4afa0cac",
+      "name": "Preparacion de datos",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1488,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $('Preparacion de datos').item.json.isValidReservation }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "121ff2e7-d8e3-43d0-8cbb-77a943c4a07c",
+      "name": "Validacion de Datos",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1264,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1Ls9XMNW1yh-53kKD1dzErM10XR3AeP73GAlIamkhG3g",
+          "mode": "list",
+          "cachedResultName": "Reservas_Restaurante",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ls9XMNW1yh-53kKD1dzErM10XR3AeP73GAlIamkhG3g/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ls9XMNW1yh-53kKD1dzErM10XR3AeP73GAlIamkhG3g/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Restaurante": "={{ JSON.parse($json.parsedResponse).restaurantName }}",
+            "Fecha": "={{ JSON.parse($json.parsedResponse).date }}",
+            "Hora": "={{ JSON.parse($json.parsedResponse).time }}",
+            "Personas": "={{ JSON.parse($json.parsedResponse).numberOfPeople }}",
+            "Cliente": "={{ JSON.parse($json.parsedResponse).customerName }}",
+            "Notas": "={{ JSON.parse($json.parsedResponse).message }}",
+            "Timestamp": "={{ $now.toISO() }}",
+            "ID": "={{ $now.toMillis() }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Restaurante",
+              "displayName": "Restaurante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Hora",
+              "displayName": "Hora",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Personas",
+              "displayName": "Personas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Cliente",
+              "displayName": "Cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Notas",
+              "displayName": "Notas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "efe84d12-9d8b-44a4-9d2f-d3043b021202",
+      "name": "POST Datos",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1040,
+        1488
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rSMvx2sgKYE8pXfZ",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Preparacion de datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API": {
+      "main": [
+        [
+          {
+            "node": "GET API RESTAURANTES",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparacion de datos": {
+      "main": [
+        [
+          {
+            "node": "Validacion de Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacion de Datos": {
+      "main": [
+        [
+          {
+            "node": "POST Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5a8c6831-387b-417d-8f66-5b7a13847b91",
+  "meta": {
+    "instanceId": "a368e140cd7496e5a149cf731050107d2b0b21e3435cf82873f544573eb886a3"
+  },
+  "id": "QmCk1OEryBvnBvIc",
+  "tags": []
+}
